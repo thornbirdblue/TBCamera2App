@@ -41,9 +41,14 @@ import android.os.SystemClock;
 import android.util.Log;
 import android.util.Size;
 import android.view.Surface;
+import android.graphics.Canvas;
+import android.graphics.Rect;
+import android.graphics.Bitmap;
+import android.graphics.Bitmap.Config;
 import android.media.Image.Plane;
 
 import java.nio.ByteBuffer;
+import java.nio.Buffer;
 import java.nio.BufferUnderflowException;
 import java.lang.IndexOutOfBoundsException;
 import java.util.ArrayList;
@@ -310,19 +315,46 @@ public class Api2Camera implements CameraInterface {
         public void onCaptureCompleted(CameraCaptureSession session, CaptureRequest request, TotalCaptureResult result) {
             if (!mFirstFrameArrived) {
                 mFirstFrameArrived = true;
-                long now = SystemClock.elapsedRealtime();
-                long dt = now - CameraTimer.t0;
-                long camera_dt = now - CameraTimer.t_session_go + CameraTimer.t_open_end - CameraTimer.t_open_start;
-                long repeating_req_dt = now - CameraTimer.t_burst;
-                Log.v(TAG, "App control to first frame: (" + dt + " ms)");
-                Log.v(TAG, "HAL request to first frame: (" + repeating_req_dt + " ms) " + " Total HAL wait: (" + camera_dt + " ms)");
+                Log.v(TAG, "App control to first frame");
                 //mMyCameraCallback.receivedFirstFrame();
                 //mMyCameraCallback.performanceDataAvailable((int) dt, (int) camera_dt, null);
+		//savePreview();
             }
             // Used for reprocessing.
             super.onCaptureCompleted(session, request, result);
         }
     };
 
+    private void saveCanvas(Canvas mCanvas){
+	Size mSize = mCameraInfoCache.getPreviewSize();
+	Rect mRect = new Rect(0,0,mSize.getWidth(),mSize.getHeight());
+	Bitmap mBitmap = Bitmap.createBitmap(mSize.getWidth(),mSize.getHeight(),Config.ARGB_8888);
+	Canvas saveCanvas = new Canvas(mBitmap);
+	saveCanvas = mCanvas;
+	saveCanvas.save();
 
+	ByteBuffer mBuffer = ByteBuffer.allocate(mSize.getWidth()*mSize.getHeight()*3/2);
+	mBitmap.copyPixelsToBuffer(mBuffer);
+
+	final byte[] Buf;
+	if(mBuffer.hasArray())
+		Buf = mBuffer.array();
+	else
+	{
+		Buf = new byte[mBuffer.capacity()];
+		mBuffer.get(Buf);
+	}
+	MediaSaver.saveImage(Buf);	
+    }
+
+    private void savePreview(){
+	Size mSize = mCameraInfoCache.getPreviewSize();
+	Rect mRect = new Rect(0,0,mSize.getWidth(),mSize.getHeight());
+        
+	Log.v(TAG, "Save Preview width: "+mSize.getWidth()+" height: "+mSize.getHeight());
+	
+	Canvas mCanvas = mPreviewSurface.lockCanvas(mRect);
+	//saveCanvas(mCanvas);
+	mPreviewSurface.unlockCanvas(mCanvas);	
+    };
 }

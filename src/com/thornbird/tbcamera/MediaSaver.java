@@ -93,6 +93,30 @@ public class MediaSaver {
     }
 
 
+    public static String saveImage(byte[] Data) {
+        String filename = "";
+        try {
+            File file;
+            while (true) {
+                filename = "/sdcard/DCIM/Camera/Preview.data";
+                file = new File(filename);
+                if (file.createNewFile()) {
+                    break;
+                }
+            }
+
+            OutputStream os = new FileOutputStream(file);
+            os.write(Data);
+            os.flush();
+            os.close();
+
+            Log.v(TAG,"Save Image!");
+        } catch (IOException e) {
+            Log.e(TAG, "Error creating new file: ", e);
+        }
+        return filename;
+    }
+
     // We use this instead of MediaStore.Images.Media.insertImage() because we want to add date metadata
     public static void insertImage(ContentResolver cr, File file) {
 
